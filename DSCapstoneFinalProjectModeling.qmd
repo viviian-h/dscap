@@ -1,0 +1,258 @@
+---
+title: "DSCapstoneFinal_Modeling"
+format: html
+editor: visual
+---
+
+## DS Capstone Final Project Modeling
+
+```{r}
+library(tidyverse)
+library(lmtest)
+library(sandwich)
+library(marginaleffects)
+
+# Read in data
+dat <- read_csv('/Users/vivianhuang/Desktop/DScapstone/Week_7/ds_finalproject_data.csv')
+
+# Make sure all columns are right data types
+dat <- dat %>%
+  mutate(
+    TESEX      = factor(TESEX, levels = c(1, 2), labels = c("Male", "Female")),
+    race       = case_when(
+      race == "American Indian" ~ "Other",
+      TRUE                      ~ race
+    ),
+    race       = factor(race, levels = c("White", "Hispanic", "Black", "Asian", "Other")),
+    faminc_cat = factor(faminc_cat, levels = c(1, 2, 3, 4, 5),
+                        labels = c("Low", "Middle Low", "Middle", "Middle High", "High")),
+    TESCHLVL   = factor(TESCHLVL, levels = c(1, 2), labels = c("High School", "College")),
+    GEREG      = factor(GEREG),
+    weekday    = factor(weekday, levels = c("Weekday", "Weekend")),
+    TUMONTH    = factor(TUMONTH),
+    TUYEAR     = factor(TUYEAR),
+    any_edtime = as.integer(edtime > 0),
+    log_edtime = log(ifelse(edtime > 0, edtime, NA))
+  )
+
+
+# Period of time
+dat <- dat %>%
+  mutate(period = case_when(
+    as.numeric(as.character(TUYEAR)) %in% 2003:2007 ~ "2003-07",
+    as.numeric(as.character(TUYEAR)) %in% 2008:2012 ~ "2008-12",
+    as.numeric(as.character(TUYEAR)) %in% 2013:2017 ~ "2013-17",
+    as.numeric(as.character(TUYEAR)) %in% 2018:2024 ~ "2018-24"
+  ) %>% factor())
+```
+
+```{r}
+# Zero distribution
+cat("Total rows:", nrow(dat), "\n")
+cat("Zeros in edtime:", sum(dat$edtime == 0), "\n")
+cat("% zeros:", mean(dat$edtime == 0) * 100, "%\n")
+
+# Sample sizes
+cat("Full sample n:", nrow(dat), "\n")
+cat("Nonzero sample n:", nrow(dat_nonzero), "\n")
+
+# Check factor levels
+levels(dat$TESEX)
+levels(dat$race)
+levels(dat$faminc_cat)
+levels(dat$TESCHLVL)
+
+# Check NAs
+colSums(is.na(dat))
+```
+
+```{r}
+# Zero rate by key groups: does it vary as expected?
+dat %>%
+  group_by(TESEX) %>%
+  summarise(
+    n          = n(),
+    pct_zero   = mean(edtime == 0) * 100,
+    mean_edtime = mean(edtime)
+  )
+
+# By school level
+dat %>%
+  group_by(TESCHLVL) %>%
+  summarise(
+    n           = n(),
+    pct_zero    = mean(edtime == 0) * 100,
+    mean_edtime = mean(edtime)
+  )
+
+# By weekday vs weekend
+dat %>%
+  group_by(weekday) %>%
+  summarise(
+    n           = n(),
+    pct_zero    = mean(edtime == 0) * 100,
+    mean_edtime = mean(edtime)
+  )
+
+# Weekday vs weekend by gender
+dat %>%
+  group_by(weekday, TESEX) %>%
+  summarise(
+    n           = n(),
+    pct_zero    = mean(edtime == 0) * 100,
+    mean_edtime = mean(edtime),
+    .groups     = "drop"
+  )
+```
+
+## Run Logistic Regression- check if any time spent on education
+
+```{r}
+# Primary logistic regression model to check coefficients of gender, race, etc on whether or not time was spent on education
+part1_main <- glm(any_edtime ~ TESEX * race + 
+                                TESEX * faminc_cat + 
+                                TESEX * GEREG +
+                                TESEX * TESCHLVL +
+                                weekday +
+                                TUMONTH +
+                                period,  
+                  data   = dat,
+                  family = binomial(link = "logit"))
+
+
+# Trend model — gender x year
+part1_trend <- glm(any_edtime ~ TESEX * as.numeric(as.character(TUYEAR)) + 
+                                 TESEX * race + 
+                                 TESEX * faminc_cat + 
+                                 TESEX * GEREG +
+                                 TESEX * TESCHLVL +
+                                 weekday + TUMONTH,  # no year FE here
+                   data   = dat,
+                   family = binomial(link = "logit"))
+
+summary(part1_main)
+summary(part1_trend)
+```
+
+## Linear Regression- how much time spent on education
+
+```{r}
+# Checking overall coefficients for gender, race etc. on education time
+part2_main <- lm(log_edtime ~ TESEX * race + 
+                               TESEX * faminc_cat + 
+                               TESEX * GEREG +
+                               TESEX * TESCHLVL +
+                               weekday +
+                               TUMONTH + period,
+                 data = dat_nonzero)
+
+# View with robust standard errors
+summary(part2_main, vcov = vcovHC(part2_trend, type = "HC3"))
+
+part2_trend <- lm(log_edtime ~ TESEX * as.numeric(as.character(TUYEAR)) + 
+                                TESEX * race + 
+                                TESEX * faminc_cat + 
+                                TESEX * GEREG +
+                                TESEX * TESCHLVL +
+                                weekday + TUMONTH,
+                  data = dat_nonzero)
+
+# View with robust standard errors
+summary(part2_trend, vcov = vcovHC(part2_trend, type = "HC3"))
+```
+
+```{r}
+# Check Linear regression model assumptions
+par(mfrow = c(2, 2))
+plot(part2_main)
+par(mfrow = c(1, 1))
+
+plot(part2_main, which = 3)
+library(lmtest)
+bptest(part2_main) 
+```
+
+```{r}
+# Long format
+dist_year <- dat %>%
+  group_by(TUYEAR, TESEX) %>%
+  summarise(
+    n                   = n(),
+    any_edtime_n        = sum(edtime > 0),
+    no_edtime_n         = sum(edtime == 0),
+    any_edtime_pct      = mean(edtime > 0) * 100,
+    no_edtime_pct       = mean(edtime == 0) * 100,
+    mean_edtime         = mean(edtime),
+    mean_edtime_nonzero = mean(edtime[edtime > 0]),
+    .groups = "drop"
+  ) %>%
+  mutate(across(where(is.numeric), round, 2))
+
+print(dist_year, n = Inf)
+
+# Wide format — male vs female side by side
+dist_wide <- dist_year %>%
+  pivot_wider(
+    id_cols     = TUYEAR,
+    names_from  = TESEX,
+    values_from = c(any_edtime_pct, no_edtime_pct, mean_edtime, mean_edtime_nonzero)
+  )
+
+print(dist_wide, n = Inf)
+```
+
+## Get unlogged coefficients and confidence intervals
+
+```{r}
+# Part 1
+exp(cbind(OR = coef(part1_main), confint(part1_main))) 
+exp(cbind(OR = coef(part1_trend), confint(part1_trend))) 
+
+# Get robust variance-covariance matrix
+hc3 <- vcovHC(part2_main, type = "HC3")
+
+# Robust coefficients and SEs
+robust_coefs <- coeftest(part2_main, vcov = hc3)
+
+# Robust CIs
+robust_ci <- coefci(part2_main, vcov = hc3)
+
+# % change with robust SEs
+pct_change_robust <- data.frame(
+  estimate = (exp(coef(part2_main)) - 1) * 100,
+  ci_low   = (exp(robust_ci[, 1]) - 1) * 100,
+  ci_high  = (exp(robust_ci[, 2]) - 1) * 100,
+  p_value  = robust_coefs[, 4]
+)
+
+print(round(pct_change_robust, 2))
+
+```
+
+## Export data for plotting in matplotlib
+
+```{r}
+# Add predictions to actual dataset
+dat$p_study_hat <- predict(part1_trend, type = "response")
+
+# Average predicted probability by year and gender
+pred_avg <- dat %>%
+  group_by(TUYEAR, TESEX) %>%
+  summarise(p_study = mean(p_study_hat), .groups = "drop")
+
+write.csv(pred_avg, "pred_data.csv", row.names = FALSE)
+
+table(dat$race, dat$TESEX)
+```
+
+```{r}
+# In R — predict from part2_trend on actual data
+dat_nonzero$pred_log <- predict(part2_trend)
+dat_nonzero$pred_minutes <- exp(dat_nonzero$pred_log)
+
+pred_part2 <- dat_nonzero %>%
+  group_by(TUYEAR, TESEX) %>%
+  summarise(pred_minutes = mean(pred_minutes), .groups = "drop")
+
+write.csv(pred_part2, "pred_part2.csv", row.names = FALSE)
+```
