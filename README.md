@@ -5,7 +5,7 @@ Has time spent on educational activities varied by gender from 2003-2024?
 Are there other factors, including income, location, race or their interactions with gender that contribute to differences in time spent on education?
 
 ## Data Sources
-Roster, Respondent, Activity, and Current Population Survey files from the American Time Use Survey Data (ATUS) spanning 2003-2024.
+Roster, Respondent, Activity, and Current Population Survey files from the American Time Use Survey Data (ATUS) spanning 2003-2024. Data here: https://www.bls.gov/tus/data.htm
 
 ## Sample
 16,898 full-time students aged 15-24 in the ATUS dataset 
