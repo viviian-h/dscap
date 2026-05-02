@@ -1,4 +1,4 @@
-# Vivian Huang Data Science Capstone Final Project
+# Vivian Huang: Data Science Capstone Final Project
 
 ## Research Question:
 Has time spent on educational activities varied by gender from 2003-2024? 
