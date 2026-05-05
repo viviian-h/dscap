@@ -15,3 +15,8 @@ Roster, Respondent, Activity, and Current Population Survey files from the Ameri
 - DSCapstoneFinalProject.ipynb contains data cleaning as well as data visualization work
 - DSCapstoneFinalProjectModeling.qmd contains modeling work
 - The file named "Data" contains the clean data used to run the models (ds_finalproject_data.csv), predictions for the logistic regression used for plotting(pred_data.csv) and predictions for the linear regression used for plotting (pred_part2.csv).
+
+## To Reproduce:
+1. Run the python file (DSCapstoneFinalProject.ipynb) until *** Run R Code before this*** section
+2. Use ds_finalproject_data.csv, which was created from the Python file, to run the models and create the prediction csvs.
+3. Run the section after *** Run R Code before this*** to create the final graphs
