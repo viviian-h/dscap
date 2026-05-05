@@ -35,7 +35,6 @@ dat <- dat %>%
     log_edtime = log(ifelse(edtime > 0, edtime, NA))
   )
 
-
 # Period of time
 dat <- dat %>%
   mutate(period = case_when(
@@ -47,6 +46,7 @@ dat <- dat %>%
 ```
 
 ```{r}
+dat_nonzero <- dat[dat$edtime > 0,]
 # Zero distribution
 cat("Total rows:", nrow(dat), "\n")
 cat("Zeros in edtime:", sum(dat$edtime == 0), "\n")
@@ -246,6 +246,7 @@ table(dat$race, dat$TESEX)
 ```
 
 ```{r}
+colSums(is.na(dat_nonzero))
 # In R — predict from part2_trend on actual data
 dat_nonzero$pred_log <- predict(part2_trend)
 dat_nonzero$pred_minutes <- exp(dat_nonzero$pred_log)
