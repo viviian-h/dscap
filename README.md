@@ -11,7 +11,7 @@ Roster, Respondent, Activity, and Current Population Survey files from the Ameri
 16,898 full-time students aged 15-24 in the ATUS dataset 
 
 ## Files:
-- VivianHuang_DataScienceCapstoneFinal.pdf is the final poster
+- VivianHuang_DataScienceCapstoneFinalPoster.pdf is the final poster
 - DSCapstoneFinalProject.ipynb contains data cleaning as well as data visualization work
 - DSCapstoneFinalProjectModeling.qmd contains modeling work
 - The file named "Data" contains the clean data used to run the models (ds_finalproject_data.csv), predictions for the logistic regression used for plotting(pred_data.csv) and predictions for the linear regression used for plotting (pred_part2.csv) as well as zipped ATUS respondent and roster files.
