@@ -108,6 +108,7 @@ dat %>%
 ## Run Logistic Regression- check if any time spent on education
 
 ```{r}
+colSums(is.na(dat))
 # Primary logistic regression model to check coefficients of gender, race, etc on whether or not time was spent on education
 part1_main <- glm(any_edtime ~ TESEX * race + 
                                 TESEX * faminc_cat + 
@@ -246,14 +247,860 @@ table(dat$race, dat$TESEX)
 ```
 
 ```{r}
-colSums(is.na(dat_nonzero))
-# In R — predict from part2_trend on actual data
+# Smearing correction
+smearing_factor <- mean(exp(residuals(part2_trend)))
+
 dat_nonzero$pred_log <- predict(part2_trend)
-dat_nonzero$pred_minutes <- exp(dat_nonzero$pred_log)
+dat_nonzero$pred_minutes <- exp(dat_nonzero$pred_log) * smearing_factor
 
 pred_part2 <- dat_nonzero %>%
   group_by(TUYEAR, TESEX) %>%
   summarise(pred_minutes = mean(pred_minutes), .groups = "drop")
-
 write.csv(pred_part2, "pred_part2.csv", row.names = FALSE)
+```
+
+## ANOVA
+
+```{r}
+## FOR GENDER AND INTERACTIONS
+# Model 1
+nogenderi1 <- glm(any_edtime ~ race + 
+                                faminc_cat + 
+                                GEREG +
+                                TESCHLVL +
+                                weekday +
+                                TUMONTH +
+                                period,  
+                  data   = dat,
+                  family = binomial(link = "logit"))
+anova(nogenderi1, part1_main)
+
+# Model 2
+nogenderi2 <- glm(any_edtime ~ as.numeric(as.character(TUYEAR)) + 
+                                 race + 
+                                 faminc_cat + 
+                                 GEREG +
+                                 TESCHLVL +
+                                 weekday + TUMONTH,  
+                  data   = dat,
+                  family = binomial(link = "logit"))
+anova(nogenderi2, part1_trend)
+
+# Model 3
+nogenderi3 <- lm(log_edtime ~ race + 
+                               faminc_cat + 
+                               GEREG +
+                               TESCHLVL +
+                               weekday +
+                               TUMONTH + period,
+                 data = dat_nonzero)
+anova(nogenderi3, part2_main)
+
+# Model 4
+nogenderi4 <- lm(log_edtime ~ TESEX:as.numeric(as.character(TUYEAR)) + 
+                                TESEX:race + 
+                                TESEX:faminc_cat + 
+                                TESEX:GEREG +
+                                TESEX:TESCHLVL +
+                                weekday + TUMONTH,
+                  data = dat_nonzero)
+
+anova(nogenderi4, part2_trend)
+```
+
+```{r}
+### FOR GENDER
+
+# Model 1
+nogender1 <- glm(any_edtime ~ TESEX:race + 
+                                TESEX:faminc_cat + 
+                                TESEX:GEREG +
+                                TESEX:TESCHLVL +
+                                weekday +
+                                TUMONTH +
+                                period,  
+                  data   = dat,
+                  family = binomial(link = "logit"))
+anova(nogender1, part1_main)
+summary(nogender1)
+summary(part1_main)
+# Model 2
+nogender2 <- glm(any_edtime ~ TESEX:as.numeric(as.character(TUYEAR)) + 
+                                 TESEX:race + 
+                                 TESEX:faminc_cat + 
+                                 TESEX:GEREG +
+                                 TESEX:TESCHLVL +
+                                 weekday + TUMONTH,  
+                  data   = dat,
+                  family = binomial(link = "logit"))
+anova(nogender2, part1_trend)
+
+# Model 3
+nogender3 <- lm(log_edtime ~ TESEX:race + 
+                               TESEX:faminc_cat + 
+                               TESEX:GEREG +
+                               TESEX:TESCHLVL +
+                               weekday +
+                               TUMONTH + period,
+                 data = dat_nonzero)
+anova(nogender3, part2_main)
+summary(nogender3)
+summary(part2_main)
+length(nogender3$coefficients)
+length(part2_main$coefficients)
+# leave p value off of co-efficient
+
+# Model 4
+nogender4 <- lm(log_edtime ~ TESEX:as.numeric(as.character(TUYEAR)) + 
+                                TESEX:race + 
+                                TESEX:faminc_cat + 
+                                TESEX:GEREG +
+                                TESEX:TESCHLVL +
+                                weekday + TUMONTH,
+                  data = dat_nonzero)
+
+anova(nogender4, part2_trend)
+```
+
+```{r}
+### FOR YEAR + interactions
+# Model 2
+noyear2 <- glm(any_edtime ~ TESEX * race + 
+                                 TESEX * faminc_cat + 
+                                 TESEX * GEREG +
+                                 TESEX * TESCHLVL +
+                                 weekday + TUMONTH,  
+               data   = dat,
+               family = binomial(link = "logit"))
+anova(noyear2, part1_trend)
+
+
+# Model 4
+noyear4 <- lm(log_edtime ~ TESEX * race + 
+                                TESEX * faminc_cat + 
+                                TESEX * GEREG +
+                                TESEX * TESCHLVL +
+                                weekday + TUMONTH,
+                  data = dat_nonzero)
+
+anova(noyear4, part2_trend)
+```
+
+```{r}
+### FOR YEAR
+# Model 2
+noyearn2 <- glm(any_edtime ~ TESEX:TUYEAR + 
+                                TESEX * race + 
+                                 TESEX * faminc_cat + 
+                                 TESEX * GEREG +
+                                 TESEX * TESCHLVL +
+                                 weekday + TUMONTH,  
+               data   = dat,
+               family = binomial(link = "logit"))
+anova(noyearn2, part1_trend)
+
+
+# Model 4
+noyearn4 <- lm(log_edtime ~ TESEX:TUYEAR + 
+                                TESEX * race + 
+                                TESEX * faminc_cat + 
+                                TESEX * GEREG +
+                                TESEX * TESCHLVL +
+                                weekday + TUMONTH,
+                  data = dat_nonzero)
+
+anova(noyearn4, part2_trend)
+```
+
+```{r}
+### FOR RACE + interactions
+# Model 1
+norace1 <- glm(any_edtime ~ TESEX * faminc_cat + 
+                                TESEX * GEREG +
+                                TESEX * TESCHLVL +
+                                weekday +
+                                TUMONTH +
+                                period,  
+                  data   = dat,
+                  family = binomial(link = "logit"))
+anova(norace1, part1_main)
+
+# Model 2
+norace2 <- glm(any_edtime ~ TESEX * as.numeric(as.character(TUYEAR)) +
+                                 TESEX * faminc_cat + 
+                                 TESEX * GEREG +
+                                 TESEX * TESCHLVL +
+                                 weekday + TUMONTH,  # no year FE here
+                   data   = dat,
+                   family = binomial(link = "logit"))
+anova(norace2, part1_trend)
+
+# Model 3
+norace3 <- lm(log_edtime ~ TESEX * faminc_cat + 
+                               TESEX * GEREG +
+                               TESEX * TESCHLVL +
+                               weekday +
+                               TUMONTH + period,
+                 data = dat_nonzero)
+anova(norace3, part2_main)
+
+# Model 4
+norace4 <- lm(log_edtime ~ TESEX * as.numeric(as.character(TUYEAR)) + 
+                                TESEX * faminc_cat + 
+                                TESEX * GEREG +
+                                TESEX * TESCHLVL +
+                                weekday + TUMONTH,
+                  data = dat_nonzero)
+
+anova(norace4, part2_trend)
+```
+
+```{r}
+### FOR RACE
+# Model 1
+noracen1 <- glm(any_edtime ~ TESEX:race + 
+                                TESEX * faminc_cat + 
+                                TESEX * GEREG +
+                                TESEX * TESCHLVL +
+                                weekday +
+                                TUMONTH +
+                                period,  
+                  data   = dat,
+                  family = binomial(link = "logit"))
+anova(noracen1, part1_main)
+
+# Model 2
+noracen2 <- glm(any_edtime ~ TESEX * as.numeric(as.character(TUYEAR)) +
+                                 TESEX:race + 
+                                 TESEX * faminc_cat + 
+                                 TESEX * GEREG +
+                                 TESEX * TESCHLVL +
+                                 weekday + TUMONTH,  # no year FE here
+                   data   = dat,
+                   family = binomial(link = "logit"))
+anova(noracen2, part1_trend)
+
+# Model 3
+noracen3 <- lm(log_edtime ~ TESEX:race + 
+                               TESEX * faminc_cat + 
+                               TESEX * GEREG +
+                               TESEX * TESCHLVL +
+                               weekday +
+                               TUMONTH + period,
+                 data = dat_nonzero)
+anova(noracen3, part2_main)
+
+# Model 4
+noracen4 <- lm(log_edtime ~ TESEX * as.numeric(as.character(TUYEAR)) + 
+                                TESEX:race + 
+                                TESEX * faminc_cat + 
+                                TESEX * GEREG +
+                                TESEX * TESCHLVL +
+                                weekday + TUMONTH,
+                  data = dat_nonzero)
+
+anova(noracen4, part2_trend)
+```
+
+```{r}
+### No income + interactions
+# Model 1
+noin1 <- glm(any_edtime ~ TESEX * race + 
+                                TESEX * GEREG +
+                                TESEX * TESCHLVL +
+                                weekday +
+                                TUMONTH +
+                                period,  
+                  data   = dat,
+                  family = binomial(link = "logit"))
+anova(noin1, part1_main)
+
+# Model 2
+noin2 <- glm(any_edtime ~ TESEX * as.numeric(as.character(TUYEAR)) + 
+                                 TESEX * race + 
+                                 TESEX * GEREG +
+                                 TESEX * TESCHLVL +
+                                 weekday + TUMONTH,  # no year FE here
+                   data   = dat,
+                   family = binomial(link = "logit"))
+anova(noin2, part1_trend)
+
+# Model 3
+noin3 <- lm(log_edtime ~ TESEX * race + 
+                               TESEX * GEREG +
+                               TESEX * TESCHLVL +
+                               weekday +
+                               TUMONTH + period,
+                 data = dat_nonzero)
+anova(noin3, part2_main)
+
+# Model 4
+noin4 <- lm(log_edtime ~ TESEX * as.numeric(as.character(TUYEAR)) + 
+                                TESEX * race + 
+                                TESEX * GEREG +
+                                TESEX * TESCHLVL +
+                                weekday + TUMONTH,
+                  data = dat_nonzero)
+
+anova(noin4, part2_trend)
+```
+
+```{r}
+### No income
+# Model 1
+noin1 <- glm(any_edtime ~ TESEX * race + 
+                                TESEX:faminc_cat + 
+                                TESEX * GEREG +
+                                TESEX * TESCHLVL +
+                                weekday +
+                                TUMONTH +
+                                period,  
+                  data   = dat,
+                  family = binomial(link = "logit"))
+anova(noin1, part1_main)
+
+# Model 2
+noin2 <- glm(any_edtime ~ TESEX * as.numeric(as.character(TUYEAR)) + 
+                                 TESEX * race + 
+                                 TESEX:faminc_cat + 
+                                 TESEX * GEREG +
+                                 TESEX * TESCHLVL +
+                                 weekday + TUMONTH,  # no year FE here
+                   data   = dat,
+                   family = binomial(link = "logit"))
+anova(noin2, part1_trend)
+
+# Model 3
+noin3 <- lm(log_edtime ~ TESEX * race + 
+                               TESEX:faminc_cat + 
+                               TESEX * GEREG +
+                               TESEX * TESCHLVL +
+                               weekday +
+                               TUMONTH + period,
+                 data = dat_nonzero)
+anova(noin3, part2_main)
+
+# Model 4
+noin4 <- lm(log_edtime ~ TESEX * as.numeric(as.character(TUYEAR)) + 
+                                TESEX * race + 
+                                TESEX:faminc_cat + 
+                                TESEX * GEREG +
+                                TESEX * TESCHLVL +
+                                weekday + TUMONTH,
+                  data = dat_nonzero)
+
+anova(noin4, part2_trend)
+```
+
+```{r}
+### Region + interactions
+# Model 1
+noreg1 <- glm(any_edtime ~ TESEX * race + 
+                                TESEX * faminc_cat + 
+                                TESEX * TESCHLVL +
+                                weekday +
+                                TUMONTH +
+                                period,  
+                  data   = dat,
+                  family = binomial(link = "logit"))
+anova(noreg1, part1_main)
+
+# Model 2
+noreg2 <- glm(any_edtime ~ TESEX * as.numeric(as.character(TUYEAR)) + 
+                                 TESEX * race + 
+                                 TESEX * faminc_cat + 
+                                 TESEX * TESCHLVL +
+                                 weekday + TUMONTH,  # no year FE here
+                   data   = dat,
+                   family = binomial(link = "logit"))
+anova(noreg2, part1_trend)
+
+# Model 3
+noreg3 <- lm(log_edtime ~ TESEX * race + 
+                               TESEX * faminc_cat + 
+                               TESEX * TESCHLVL +
+                               weekday +
+                               TUMONTH + period,
+                 data = dat_nonzero)
+anova(noreg3, part2_main)
+
+# Model 4
+noreg4 <- lm(log_edtime ~ TESEX * as.numeric(as.character(TUYEAR)) + 
+                                TESEX * race + 
+                                TESEX * faminc_cat + 
+                                TESEX * TESCHLVL +
+                                weekday + TUMONTH,
+                  data = dat_nonzero)
+
+anova(noreg4, part2_trend)
+
+```
+
+```{r}
+### Region 
+# Model 1
+noregn1 <- glm(any_edtime ~ TESEX * race + 
+                                TESEX * faminc_cat + 
+                                TESEX:GEREG +
+                                TESEX * TESCHLVL +
+                                weekday +
+                                TUMONTH +
+                                period,  
+                  data   = dat,
+                  family = binomial(link = "logit"))
+anova(noregn1, part1_main)
+
+# Model 2
+noregn2 <- glm(any_edtime ~ TESEX * as.numeric(as.character(TUYEAR)) + 
+                                 TESEX * race + 
+                                 TESEX * faminc_cat + 
+                                 TESEX:GEREG +
+                                 TESEX * TESCHLVL +
+                                 weekday + TUMONTH,  # no year FE here
+                   data   = dat,
+                   family = binomial(link = "logit"))
+anova(noregn2, part1_trend)
+
+# Model 3
+noregn3 <- lm(log_edtime ~ TESEX * race + 
+                               TESEX * faminc_cat + 
+                               TESEX:GEREG +
+                               TESEX * TESCHLVL +
+                               weekday +
+                               TUMONTH + period,
+                 data = dat_nonzero)
+anova(noregn3, part2_main)
+
+# Model 4
+noregn4 <- lm(log_edtime ~ TESEX * as.numeric(as.character(TUYEAR)) + 
+                                TESEX * race + 
+                                TESEX * faminc_cat + 
+                                TESEX:GEREG +
+                                TESEX * TESCHLVL +
+                                weekday + TUMONTH,
+                  data = dat_nonzero)
+
+anova(noregn4, part2_trend)
+
+```
+
+```{r}
+## College v. High School + interactions
+# Model 1
+noco1 <- glm(any_edtime ~ TESEX * race + 
+                                TESEX * faminc_cat + 
+                                TESEX * GEREG +
+                                weekday +
+                                TUMONTH +
+                                period,  
+                  data   = dat,
+                  family = binomial(link = "logit"))
+anova(noco1, part1_main)
+
+# Model 2
+noco2 <- glm(any_edtime ~ TESEX * as.numeric(as.character(TUYEAR)) + 
+                                 TESEX * race + 
+                                 TESEX * faminc_cat + 
+                                 TESEX * GEREG +
+                                 weekday + TUMONTH,  # no year FE here
+                   data   = dat,
+                   family = binomial(link = "logit"))
+anova(noco2, part1_trend)
+
+# Model 3
+noco3 <- lm(log_edtime ~ TESEX * race + 
+                               TESEX * faminc_cat + 
+                               TESEX * GEREG +
+                               weekday +
+                               TUMONTH + period,
+                 data = dat_nonzero)
+anova(noco3, part2_main)
+
+# Model 4
+noco4 <- lm(log_edtime ~ TESEX * as.numeric(as.character(TUYEAR)) + 
+                                TESEX * race + 
+                                TESEX * faminc_cat + 
+                                TESEX * GEREG +
+                                weekday + TUMONTH,
+                  data = dat_nonzero)
+
+anova(noco4, part2_trend)
+```
+
+```{r}
+## College v. High School
+# Model 1
+nocon1 <- glm(any_edtime ~ TESEX * race + 
+                                TESEX * faminc_cat + 
+                                TESEX * GEREG +
+                                TESEX:TESCHLVL +
+                                weekday +
+                                TUMONTH +
+                                period,  
+                  data   = dat,
+                  family = binomial(link = "logit"))
+anova(nocon1, part1_main)
+
+# Model 2
+nocon2 <- glm(any_edtime ~ TESEX * as.numeric(as.character(TUYEAR)) + 
+                                 TESEX * race + 
+                                 TESEX * faminc_cat + 
+                                 TESEX * GEREG +
+                                 TESEX:TESCHLVL +
+                                 weekday + TUMONTH,  # no year FE here
+                   data   = dat,
+                   family = binomial(link = "logit"))
+anova(nocon2, part1_trend)
+
+# Model 3
+nocon3 <- lm(log_edtime ~ TESEX * race + 
+                               TESEX * faminc_cat + 
+                               TESEX * GEREG +
+                               TESEX: TESCHLVL +
+                               weekday +
+                               TUMONTH + period,
+                 data = dat_nonzero)
+anova(nocon3, part2_main)
+
+# Model 4
+nocon4 <- lm(log_edtime ~ TESEX * as.numeric(as.character(TUYEAR)) + 
+                                TESEX * race + 
+                                TESEX * faminc_cat + 
+                                TESEX * GEREG +
+                                TESEX:TESCHLVL +
+                                weekday + TUMONTH,
+                  data = dat_nonzero)
+
+anova(nocon4, part2_trend)
+```
+
+```{r}
+### Weekend/Weekday
+# Model 1
+noww1 <- glm(any_edtime ~ TESEX * race + 
+                                TESEX * faminc_cat + 
+                                TESEX * GEREG +
+                                TESEX * TESCHLVL +
+                                TUMONTH +
+                                period,  
+                  data   = dat,
+                  family = binomial(link = "logit"))
+anova(noww1, part1_main)
+
+# Model 2
+noww2 <- glm(any_edtime ~ TESEX * as.numeric(as.character(TUYEAR)) + 
+                                 TESEX * race + 
+                                 TESEX * faminc_cat + 
+                                 TESEX * GEREG +
+                                 TESEX * TESCHLVL +
+                                 TUMONTH,  
+                   data   = dat,
+                   family = binomial(link = "logit"))
+anova(noww2, part1_trend)
+
+# Model 3
+noww3 <- lm(log_edtime ~ TESEX * race + 
+                               TESEX * faminc_cat + 
+                               TESEX * GEREG +
+                               TESEX * TESCHLVL +
+                               TUMONTH + period,
+                 data = dat_nonzero)
+anova(noww3, part2_main)
+
+# Model 4
+noww4 <- lm(log_edtime ~ TESEX * as.numeric(as.character(TUYEAR)) + 
+                                TESEX * race + 
+                                TESEX * faminc_cat + 
+                                TESEX * GEREG +
+                                TESEX * TESCHLVL +
+                                TUMONTH,
+                  data = dat_nonzero)
+
+anova(noww4, part2_trend)
+```
+
+```{r}
+### Month
+# Model 1
+nomon1 <- glm(any_edtime ~ TESEX * race + 
+                                TESEX * faminc_cat + 
+                                TESEX * GEREG +
+                                TESEX * TESCHLVL +
+                                weekday +
+                                period,  
+                  data   = dat,
+                  family = binomial(link = "logit"))
+anova(nomon1, part1_main)
+
+# Model 2
+nomon2 <- glm(any_edtime ~ TESEX * as.numeric(as.character(TUYEAR)) + 
+                                 TESEX * race + 
+                                 TESEX * faminc_cat + 
+                                 TESEX * GEREG +
+                                 TESEX * TESCHLVL +
+                                 weekday,  # no year FE here
+                   data   = dat,
+                   family = binomial(link = "logit"))
+anova(nomon2, part1_trend)
+
+# Model 3
+nomon3 <- lm(log_edtime ~ TESEX * race + 
+                               TESEX * faminc_cat + 
+                               TESEX * GEREG +
+                               TESEX * TESCHLVL +
+                               weekday +
+                               period,
+                 data = dat_nonzero)
+anova(nomon3, part2_main)
+
+# Model 4
+nomon4 <- lm(log_edtime ~ TESEX * as.numeric(as.character(TUYEAR)) + 
+                                TESEX * race + 
+                                TESEX * faminc_cat + 
+                                TESEX * GEREG +
+                                TESEX * TESCHLVL +
+                                weekday,
+                  data = dat_nonzero)
+
+anova(nomon4, part2_trend)
+```
+
+```{r}
+## Period
+# Model 1
+noper1 <- glm(any_edtime ~ TESEX * race + 
+                                TESEX * faminc_cat + 
+                                TESEX * GEREG +
+                                TESEX * TESCHLVL +
+                                weekday +
+                                TUMONTH,  
+                  data   = dat,
+                  family = binomial(link = "logit"))
+anova(noper1, part1_main)
+
+
+# Model 3
+noper3 <- lm(log_edtime ~ TESEX * race + 
+                               TESEX * faminc_cat + 
+                               TESEX * GEREG +
+                               TESEX * TESCHLVL +
+                               weekday +
+                               TUMONTH,
+                 data = dat_nonzero)
+anova(noper3, part2_main)
+
+```
+
+```{r}
+## GENDER x YEAR
+# Model 2
+nogy2 <- glm(any_edtime ~ as.numeric(as.character(TUYEAR)) + 
+                                 TESEX * race + 
+                                 TESEX * faminc_cat + 
+                                 TESEX * GEREG +
+                                 TESEX * TESCHLVL +
+                                 weekday + TUMONTH,  # no year FE here
+                   data   = dat,
+                   family = binomial(link = "logit"))
+anova(nogy2, part1_trend)
+
+
+# Model 4
+nogy4 <- lm(log_edtime ~ as.numeric(as.character(TUYEAR)) + 
+                                TESEX * race + 
+                                TESEX * faminc_cat + 
+                                TESEX * GEREG +
+                                TESEX * TESCHLVL +
+                                weekday + TUMONTH,
+                  data = dat_nonzero)
+
+anova(nogy4, part2_trend)
+```
+
+```{r}
+## GENDER x RACE
+# Model 1
+nogr1 <- glm(any_edtime ~ race + 
+                                TESEX * faminc_cat + 
+                                TESEX * GEREG +
+                                TESEX * TESCHLVL +
+                                weekday +
+                                TUMONTH +
+                                period,  
+                  data   = dat,
+                  family = binomial(link = "logit"))
+anova(nogr1, part1_main)
+
+# Model 2
+nogr2 <- glm(any_edtime ~ TESEX * as.numeric(as.character(TUYEAR)) + 
+                                 race + 
+                                 TESEX * faminc_cat + 
+                                 TESEX * GEREG +
+                                 TESEX * TESCHLVL +
+                                 weekday + TUMONTH,  # no year FE here
+                   data   = dat,
+                   family = binomial(link = "logit"))
+anova(nogr2, part1_trend)
+
+# Model 3
+nogr3 <- lm(log_edtime ~ race + 
+                               TESEX * faminc_cat + 
+                               TESEX * GEREG +
+                               TESEX * TESCHLVL +
+                               weekday +
+                               TUMONTH + period,
+                 data = dat_nonzero)
+anova(nogr3, part2_main)
+
+# Model 4
+nogr4 <- lm(log_edtime ~ TESEX * as.numeric(as.character(TUYEAR)) + 
+                                race + 
+                                TESEX * faminc_cat + 
+                                TESEX * GEREG +
+                                TESEX * TESCHLVL +
+                                weekday + TUMONTH,
+                  data = dat_nonzero)
+
+anova(nogr4, part2_trend)
+```
+
+```{r}
+## GENDER x INCOME
+# Model 1
+noginc1 <- glm(any_edtime ~ TESEX * race + 
+                                faminc_cat + 
+                                TESEX * GEREG +
+                                TESEX * TESCHLVL +
+                                weekday +
+                                TUMONTH +
+                                period,  
+                  data   = dat,
+                  family = binomial(link = "logit"))
+anova(noginc1, part1_main)
+
+# Model 2
+noginc2 <- glm(any_edtime ~ TESEX * as.numeric(as.character(TUYEAR)) + 
+                                 TESEX * race + 
+                                 faminc_cat + 
+                                 TESEX * GEREG +
+                                 TESEX * TESCHLVL +
+                                 weekday + TUMONTH,  # no year FE here
+                   data   = dat,
+                   family = binomial(link = "logit"))
+anova(noginc2, part1_trend)
+
+# Model 3
+noginc3 <- lm(log_edtime ~ TESEX * race + 
+                               faminc_cat + 
+                               TESEX * GEREG +
+                               TESEX * TESCHLVL +
+                               weekday +
+                               TUMONTH + period,
+                 data = dat_nonzero)
+anova(noginc3, part2_main)
+
+# Model 4
+noginc4 <- lm(log_edtime ~ TESEX * as.numeric(as.character(TUYEAR)) + 
+                                TESEX * race + 
+                                faminc_cat + 
+                                TESEX * GEREG +
+                                TESEX * TESCHLVL +
+                                weekday + TUMONTH,
+                  data = dat_nonzero)
+
+anova(noginc4, part2_trend)
+```
+
+```{r}
+## GENDER x REGION
+# Model 1
+nogreg1 <- glm(any_edtime ~ TESEX * race + 
+                                TESEX * faminc_cat + 
+                                GEREG +
+                                TESEX * TESCHLVL +
+                                weekday +
+                                TUMONTH +
+                                period,  
+                  data   = dat,
+                  family = binomial(link = "logit"))
+anova(nogreg1, part1_main)
+
+# Model 2
+nogreg2 <- glm(any_edtime ~ TESEX * as.numeric(as.character(TUYEAR)) + 
+                                 TESEX * race + 
+                                 TESEX * faminc_cat + 
+                                 GEREG +
+                                 TESEX * TESCHLVL +
+                                 weekday + TUMONTH,  # no year FE here
+                   data   = dat,
+                   family = binomial(link = "logit"))
+anova(nogreg2, part1_trend)
+
+# Model 3
+nogreg3 <- lm(log_edtime ~ TESEX * race + 
+                               TESEX * faminc_cat + 
+                               GEREG +
+                               TESEX * TESCHLVL +
+                               weekday +
+                               TUMONTH + period,
+                 data = dat_nonzero)
+anova(noreg3, part2_main)
+
+# Model 4
+nogreg4 <- lm(log_edtime ~ TESEX * as.numeric(as.character(TUYEAR)) + 
+                                TESEX * race + 
+                                TESEX * faminc_cat + 
+                                GEREG +
+                                TESEX * TESCHLVL +
+                                weekday + TUMONTH,
+                  data = dat_nonzero)
+
+anova(nogreg4, part2_trend)
+```
+
+```{r}
+## GENDER x SCHOOL LEVEL
+# Model 1
+nogsch1 <- glm(any_edtime ~ TESEX * race + 
+                                TESEX * faminc_cat + 
+                                TESEX * GEREG +
+                                TESCHLVL +
+                                weekday +
+                                TUMONTH +
+                                period,  
+                  data   = dat,
+                  family = binomial(link = "logit"))
+anova(nogsch1, part1_main)
+
+# Model 2
+nogsch2 <- glm(any_edtime ~ TESEX * as.numeric(as.character(TUYEAR)) + 
+                                 TESEX * race + 
+                                 TESEX * faminc_cat + 
+                                 TESEX * GEREG +
+                                 TESCHLVL +
+                                 weekday + TUMONTH,  # no year FE here
+                   data   = dat,
+                   family = binomial(link = "logit"))
+anova(nogsch2, part1_trend)
+
+# Model 3
+nogsch3 <- lm(log_edtime ~ TESEX * race + 
+                               TESEX * faminc_cat + 
+                               TESEX * GEREG +
+                               TESCHLVL +
+                               weekday +
+                               TUMONTH + period,
+                 data = dat_nonzero)
+anova(nogsch3, part2_main)
+
+# Model 4
+nogsch4 <- lm(log_edtime ~ TESEX * as.numeric(as.character(TUYEAR)) + 
+                                TESEX * race + 
+                                TESEX * faminc_cat + 
+                                TESEX * GEREG +
+                                TESCHLVL +
+                                weekday + TUMONTH,
+                  data = dat_nonzero)
+
+anova(nogsch4, part2_trend)
 ```
